@@ -1,0 +1,78 @@
+# .cursorrules
+# Bazujemy na: https://github.com/PatrickJS/awesome-cursorrules/blob/main/rules/Python.yml
+
+project:
+  name: Zlodowy
+  version: 0.1.0
+  require_folder_structure: true
+  folders:
+    - frontend/
+    - backend/
+    - infra/
+    - tests/
+
+# Python (FastAPI) – kopia i adaptacja Python.yml
+python:
+  lint:
+    enabled: true
+    tools:
+      - flake8
+      - mypy
+  formatting:
+    enabled: true
+    tools:
+      - black
+  test:
+    enabled: true
+    framework: pytest
+    coverage:
+      minimum: 80
+
+# TypeScript (Next.js) – wzór z TypeScript.yml
+typescript:
+  lint:
+    enabled: true
+    tools:
+      - eslint
+      - prettier
+  test:
+    enabled: true
+    framework: jest
+    coverage:
+      minimum: 80
+
+# Docker – na podstawie Docker.yml
+docker:
+  require_dockerfile: true
+  enforce_best_practices: true
+
+# Kubernetes – wzór Kubernetes.yml
+kubernetes:
+  require_manifests: true
+  enforce_api_versions: true
+
+# CI/CD – wzorowane na GitHubActions.yml
+ci_cd:
+  provider: github_actions
+  workflow_file: .github/workflows/ci-cd.yml
+  steps:
+    - name: lint
+    - name: test
+    - name: build
+    - name: push
+
+# Prompt constraints – nasz dodatek
+prompt_constraints:
+  max_tokens: 1024
+  enforce_tone:
+    - "luźny"
+    - "kumpelski"
+  recipe_limits:
+    max_ingredients: 6
+    max_steps: 5
+
+# Security – adaptacja Security.yml
+security:
+  forbid_hardcoded_secrets: true
+  require_env_vars: true
+  secret_manager: true

@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zlodowy-frontend
+  namespace: zlodowy
+  labels:
+    app: zlodowy-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: zlodowy-frontend
+  template:
+    metadata:
+      labels:
+        app: zlodowy-frontend
+    spec:
+      containers:
+      - name: frontend
+        image: zlodowy-frontend:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3000
+          name: http
+        env:
+        - name: NEXT_PUBLIC_API_URL
+          valueFrom:
+            configMapKeyRef:
+              name: zlodowy-config
+              key: NEXT_PUBLIC_API_URL
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "256Mi"
+            cpu: "250m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      restartPolicy: Always 

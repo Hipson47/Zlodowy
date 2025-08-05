@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: zlodowy-config
+  namespace: zlodowy
+data:
+  CORS_ORIGINS: "http://localhost:3000,http://127.0.0.1:3000"
+  LOG_LEVEL: "INFO"
+  NEXT_PUBLIC_API_URL: "http://zlodowy-backend-service:8000" 
