@@ -1,25 +1,29 @@
 """Pydantic models for request and response validation."""
 
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 from pydantic import BaseModel, Field
 
 
-class ChatRequest(BaseModel):
-    """Request model for chat endpoint."""
+class RecipeRequest(BaseModel):
+    """Request model for recipe endpoint."""
     
-    message: str = Field(
-        ...,
-        min_length=1,
-        max_length=1000,
-        description="User message to send to AI"
-    )
+    ingredients: List[str] = Field(..., min_length=1, max_length=10, description="List of ingredients")
+    preferences: Optional[str] = Field(None, max_length=500, description="User preferences for the recipe")
 
 
-class ChatResponse(BaseModel):
-    """Response model for chat endpoint."""
+class Recipe(BaseModel):
+    """Recipe model."""
     
-    message: str = Field(..., description="AI response message")
+    name: str = Field(..., description="Recipe name")
+    ingredients: List[str] = Field(..., description="List of ingredients")
+    steps: List[str] = Field(..., description="List of cooking steps")
+
+
+class RecipeResponse(BaseModel):
+    """Response model for recipe endpoint."""
+    
+    recipe: Recipe
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
 
@@ -36,4 +40,4 @@ class ErrorResponse(BaseModel):
     
     detail: str = Field(..., description="Error message")
     timestamp: datetime = Field(default_factory=datetime.utcnow)
-    error_code: Optional[str] = Field(None, description="Error code") 
+    error_code: Optional[str] = Field(None, description="Error code")

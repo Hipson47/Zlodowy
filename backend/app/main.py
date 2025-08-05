@@ -35,7 +35,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
-    description="A modern AI chat API powered by OpenAI GPT-4",
+    description="A modern AI recipe API powered by OpenAI GPT-4",
     docs_url="/docs",
     redoc_url="/redoc",
     lifespan=lifespan
@@ -67,7 +67,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # Include API routers
 app.include_router(health.router)
-app.include_router(chat.router)
+app.include_router(chat.router, prefix="/recipe", tags=["recipe"])
 
 
 @app.get("/")
@@ -89,4 +89,4 @@ if __name__ == "__main__":
         port=8000,
         reload=True,
         log_level=settings.log_level.lower()
-    ) 
+    )

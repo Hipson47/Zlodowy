@@ -1,61 +1,58 @@
-"""Chat API endpoints."""
+"""Recipe API endpoints."""
 
 import logging
-from fastapi import APIRouter, HTTPException, status
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, HTTPException, status, Body
 
-from app.models import ChatRequest, ChatResponse, ErrorResponse
+from app.models import RecipeRequest, RecipeResponse, ErrorResponse
 from app.services.openai_service import openai_service
+from app.services.preferences_manager import preferences_manager
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/chat", tags=["chat"])
+router = APIRouter(prefix="/recipe", tags=["recipe"])
 
 
 @router.post(
     "/",
-    response_model=ChatResponse,
+    response_model=RecipeResponse,
     responses={
         400: {"model": ErrorResponse},
         500: {"model": ErrorResponse},
     },
-    summary="Send a message to AI",
-    description="Send a message to the AI assistant and receive a response"
+    summary="Generate a new recipe",
+    description="Generate a new recipe based on a list of ingredients and user preferences"
 )
-async def chat(request: ChatRequest) -> ChatResponse:
+async def generate_recipe(request: RecipeRequest) -> RecipeResponse:
     """
-    Send a message to the AI assistant.
+    Generate a new recipe from a list of ingredients.
     
     Args:
-        request: Chat request containing the user message
+        request: Recipe request with ingredients and optional preferences.
         
     Returns:
-        ChatResponse: AI response with timestamp
+        The generated recipe.
         
     Raises:
-        HTTPException: If message processing fails
+        HTTPException: If recipe generation fails.
     """
     try:
-        logger.info("Processing chat request: %s", request.message[:50])
+        user_id = "static_user"  # In a real app, this would be dynamic
+        user_prefs = preferences_manager.get(user_id)
         
-        # Generate AI response
-        ai_response = await openai_service.generate_response(request.message)
-        
-        # Create response
-        response = ChatResponse(message=ai_response)
-        
-        logger.info("Chat request processed successfully")
-        return response
+        # Combine request preferences with stored preferences
+        combined_prefs = user_prefs.get('dietary', '') if user_prefs else ''
+        if request.preferences:
+            combined_prefs += f", {request.preferences}"
+            
+        recipe = await openai_service.generate_recipe(
+            ingredients=request.ingredients,
+            preferences=combined_prefs.strip(', ')
+        )
+        return RecipeResponse(recipe=recipe)
         
     except Exception as e:
-        logger.error("Error processing chat request: %s", str(e))
-        
-        error_response = ErrorResponse(
-            detail="Failed to process chat request",
-            error_code="CHAT_ERROR"
-        )
-        
+        logger.error("Error generating recipe: %s", str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=error_response.detail
-        ) 
+            detail="Failed to generate recipe"
+        )

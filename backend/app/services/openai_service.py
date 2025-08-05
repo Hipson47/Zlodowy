@@ -1,11 +1,13 @@
-"""OpenAI service for handling AI chat interactions."""
+"""OpenAI service for handling AI recipe generation."""
 
 import logging
-from typing import Optional
+import json
+from typing import Dict, Any, List, Optional
 import openai
 from openai import AsyncOpenAI
 
 from app.config import settings
+from app.models import Recipe
 
 logger = logging.getLogger(__name__)
 
@@ -17,59 +19,77 @@ class OpenAIService:
         """Initialize OpenAI client."""
         self.client = AsyncOpenAI(api_key=settings.openai_api_key)
     
-    async def generate_response(self, message: str) -> str:
+    async def generate_recipe(self, ingredients: List[str], preferences: Optional[str] = None) -> Recipe:
         """
-        Generate AI response using OpenAI GPT-4.
+        Generate a recipe using OpenAI GPT-4.
         
         Args:
-            message: User's input message
+            ingredients: List of ingredients
+            preferences: User preferences
             
         Returns:
-            AI generated response
+            A Recipe object
             
         Raises:
-            Exception: If OpenAI API call fails
+            Exception: If OpenAI API call fails or response is invalid
         """
         try:
-            logger.info("Generating AI response for message: %s", message[:50])
+            prompt = self._build_prompt(ingredients, preferences)
+            logger.info("Generating recipe for ingredients: %s", ingredients)
             
             response = await self.client.chat.completions.create(
                 model="gpt-4",
                 messages=[
-                    {
-                        "role": "system",
-                        "content": "You are a helpful AI assistant. Provide clear, concise, and accurate responses."
-                    },
-                    {
-                        "role": "user",
-                        "content": message
-                    }
+                    {"role": "system", "content": self._get_system_message()},
+                    {"role": "user", "content": prompt}
                 ],
-                max_tokens=500,
+                max_tokens=1024,
                 temperature=0.7,
+                response_format={"type": "json_object"}
             )
             
-            ai_response = response.choices[0].message.content
-            logger.info("AI response generated successfully")
+            raw_response = response.choices[0].message.content
+            if not raw_response:
+                raise ValueError("Received an empty response from OpenAI.")
+                
+            recipe_data = self._parse_recipe(raw_response)
+            logger.info("Recipe generated successfully: %s", recipe_data.get('name'))
             
-            return ai_response or "I apologize, but I couldn't generate a response at this time."
+            return Recipe(**recipe_data)
             
-        except openai.AuthenticationError as e:
-            logger.error("OpenAI authentication error: %s", str(e))
-            raise Exception("Authentication failed with OpenAI API")
-            
-        except openai.RateLimitError as e:
-            logger.error("OpenAI rate limit error: %s", str(e))
-            raise Exception("Rate limit exceeded for OpenAI API")
-            
-        except openai.APIError as e:
-            logger.error("OpenAI API error: %s", str(e))
-            raise Exception("OpenAI API error occurred")
+        except (openai.APIError, ValueError) as e:
+            logger.error("Error generating recipe: %s", str(e))
+            raise Exception("Failed to generate recipe from OpenAI")
             
         except Exception as e:
             logger.error("Unexpected error in OpenAI service: %s", str(e))
-            raise Exception("Failed to generate AI response")
+            raise Exception("An unexpected error occurred while generating the recipe")
+
+    def _build_prompt(self, ingredients: List[str], preferences: Optional[str]) -> str:
+        """Build the prompt for the OpenAI API."""
+        prompt = f"Ingredients: {', '.join(ingredients)}."
+        if preferences:
+            prompt += f"\nPreferences: {preferences}."
+        return prompt
+
+    def _get_system_message(self) -> str:
+        """Get the system message for the OpenAI API."""
+        return (
+            "You are a master chef. Based on the ingredients and preferences provided, "
+            "generate a recipe with a creative name, a list of ingredients, and cooking steps. "
+            "Provide the output in a JSON object with keys 'name', 'ingredients', and 'steps'."
+        )
+
+    def _parse_recipe(self, response: str) -> Dict[str, Any]:
+        """Parse the JSON response from OpenAI."""
+        try:
+            recipe_dict = json.loads(response)
+            if not all(k in recipe_dict for k in ['name', 'ingredients', 'steps']):
+                raise ValueError("Invalid JSON structure from OpenAI.")
+            return recipe_dict
+        except json.JSONDecodeError:
+            raise ValueError("Failed to decode JSON from OpenAI response.")
 
 
 # Global service instance
-openai_service = OpenAIService() 
+openai_service = OpenAIService()
